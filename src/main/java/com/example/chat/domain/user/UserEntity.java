@@ -3,6 +3,7 @@ package com.example.chat.domain.user;
 
 import com.example.chat.domain.BaseTimeEntity;
 import com.example.chat.domain.plan.PlanEntity;
+import com.example.chat.domain.user.user_enum.ChatId;
 import com.example.chat.domain.user.user_enum.UserRole;
 import com.example.chat.domain.user.user_enum.UserStatus;
 import jakarta.persistence.*;
@@ -18,26 +19,27 @@ import java.time.LocalDateTime;
 @Table(name = "users")
 public class UserEntity extends BaseTimeEntity {
 
-    // IDENTITY 수정 필요(고유 아이디)
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Builder.Default
+    @Column(name = "id", nullable = false, unique = true, updatable = false)
+    private String id = ChatId.generateUUID(ChatId.USER);
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "email", nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "username", nullable = false, unique = true)
     private String username;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "role", nullable = false)
     private UserRole role;
 
+    // boolean 자료형으로 비교만 하도록 수정
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(name = "status", nullable = false)
     private UserStatus status;
 
     // AI 포털 핵심: 플랜 및 토큰 관리
@@ -46,7 +48,7 @@ public class UserEntity extends BaseTimeEntity {
     private PlanEntity plan;
 
     // 잔여 토큰량
-    @Column(nullable = false)
+    @Column(name = "remainingTokens", nullable = false)
     private int remainingTokens;
 
     // 비밀번호 재설정 토큰 로직

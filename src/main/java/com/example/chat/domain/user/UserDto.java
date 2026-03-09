@@ -41,12 +41,12 @@ public class UserDto {
 
     // 사용자 정보 응답 Dto
     public record Response(
-            Long id,
+            String id,
             String email,
             String username,
             String role,
             String status,
-            Long planId,
+            String planId,
             String planName,
             // 잔여 토큰
             int remainingTokens

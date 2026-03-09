@@ -11,7 +11,7 @@ public class PlanDto {
 
     // 결제 내역 응답
     public record Response(
-            Long id,
+            String id,
             Long planId,
             String planName,
             int amount,

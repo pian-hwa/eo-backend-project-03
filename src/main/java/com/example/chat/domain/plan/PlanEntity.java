@@ -1,6 +1,7 @@
 package com.example.chat.domain.plan;
 
 import com.example.chat.domain.BaseTimeEntity;
+import com.example.chat.domain.user.user_enum.ChatId;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,23 +13,23 @@ import lombok.*;
 @Table(name = "plans")
 public class PlanEntity extends BaseTimeEntity {
 
-    // IDENTITY 수정 필요(고유 아이디)
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
 
-    // (enum을 사용하려다 관리자가 새로운 플랜을 생성하려면 접근이 안되서 불가)
-    @Column(nullable = false, unique = true)
+    @Id
+    @Builder.Default
+    @Column(name = "id", nullable = false, unique = true, updatable = false)
+    private String id = ChatId.generateUUID(ChatId.PLAN);
+
+    @Column(name = "name", nullable = false, unique = true)
     private String name;
 
     // 월간 제공 토큰량
-    @Column(nullable = false)
+    @Column(name = "limitTokens", nullable = false)
     private int limitTokens;
 
     // 접근 가능 모델
-    @Column(nullable = false)
+    @Column(name = "availableModels", nullable = false)
     private String availableModels;
 
-    @Column(nullable = false)
+    @Column(name = "price", nullable = false)
     private int price;
 }

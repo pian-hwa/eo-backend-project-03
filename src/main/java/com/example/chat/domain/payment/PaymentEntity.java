@@ -3,6 +3,7 @@ package com.example.chat.domain.payment;
 import com.example.chat.domain.BaseTimeEntity;
 import com.example.chat.domain.plan.PlanEntity;
 import com.example.chat.domain.user.UserEntity;
+import com.example.chat.domain.user.user_enum.ChatId;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -14,8 +15,10 @@ import lombok.*;
 @Table(name = "payments")
 public class PaymentEntity extends BaseTimeEntity {
 
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Id
+    @Builder.Default
+    @Column(name = "id", nullable = false, unique = true, updatable = false)
+    private String id = ChatId.generateUUID(ChatId.PAYMENT);
 
     // 누가 결제했는지
     @ManyToOne(fetch = FetchType.LAZY)
