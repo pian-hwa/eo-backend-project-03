@@ -24,6 +24,7 @@ public class MessageEntity extends BaseTimeEntity {
     @JoinColumn(name = "session_id", nullable = false)
     private SessionEntity session;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private MessageRole role;
 

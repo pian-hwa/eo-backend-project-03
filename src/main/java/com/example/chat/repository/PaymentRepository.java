@@ -8,5 +8,5 @@ import java.util.List;
 public interface PaymentRepository extends JpaRepository<PaymentEntity, String> {
 
     // 특정 유저의 결제 내역 조회
-    List<PaymentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+    List<PaymentEntity> findAllByUserIdOrderByCreatedAtDesc(String user);
 }

@@ -1,4 +1,4 @@
-package com.example.chat.service.user;
+package com.example.chat.service;
 
 import com.example.chat.domain.plan.PlanEntity;
 import com.example.chat.domain.user.EmailVerificationEntity;
@@ -10,6 +10,7 @@ import com.example.chat.repository.PlanRepository;
 import com.example.chat.repository.user.EmailRepository;
 import com.example.chat.repository.user.UserRepository;
 import com.example.chat.security.jwt.JwtProvider;
+import com.example.chat.service.user.UserService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
