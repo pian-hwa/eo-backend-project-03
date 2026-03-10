@@ -18,7 +18,7 @@ public class MessageDto {
     // 채팅 메시지 내역 응답 (질문/답변 공통)
     public record Response(
             String id,
-            MessageRole role,
+            String role,
             String content,
             String modelName,
             int usedTokens,
@@ -27,7 +27,7 @@ public class MessageDto {
         public static Response fromEntity(MessageEntity message) {
             return new Response(
                     message.getId(),
-                    message.getRole(),
+                    message.getRole().name(),
                     message.getContent(),
                     message.getModelName(),
                     message.getUsedTokens(),

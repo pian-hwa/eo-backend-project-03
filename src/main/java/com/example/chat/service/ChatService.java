@@ -1,7 +1,9 @@
 package com.example.chat.service;
 
+import com.example.chat.domain.chat.message.MessageDto;
 import com.example.chat.domain.chat.message.MessageEntity;
 import com.example.chat.domain.chat.message.MessageRole;
+import com.example.chat.domain.chat.session.SessionDto;
 import com.example.chat.domain.chat.session.SessionEntity;
 import com.example.chat.domain.user.UserEntity;
 import com.example.chat.repository.MessageRepository;
@@ -11,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
@@ -82,5 +85,35 @@ public class ChatService {
 
         // 토큰 차감
         user.decreaseTokens(usedTokens);
+    }
+
+    // 내 채팅 목록 조회
+    @Transactional(readOnly = true)
+    public List<SessionDto.Response> getMySessions(String userId) {
+        UserEntity user = userRepository.findById(userId)
+                .orElseThrow(() -> new NoSuchElementException("사용자를 찾을 수 없습니다."));
+
+        return sessionRepository.findAllByUserOrderByCreatedAtDesc(user).stream()
+                .map(SessionDto.Response::fromEntity)
+                .toList();
+    }
+
+    // 채팅방 상세 대화 내역 조회
+    @Transactional(readOnly = true)
+    public List<MessageDto.Response> getMessagesBySession(String sessionId) {
+        SessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NoSuchElementException("세션을 찾을 수 없습니다."));
+
+        return messageRepository.findAllBySessionOrderByCreatedAtAsc(session).stream()
+                .map(MessageDto.Response::fromEntity)
+                .toList();
+    }
+
+    // 채팅방 삭제
+    @Transactional
+    public void deleteSession(String sessionId) {
+        SessionEntity session = sessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NoSuchElementException("삭제할 세션이 존재하지 않습니다."));
+        sessionRepository.delete(session);
     }
 }
