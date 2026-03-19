@@ -1,9 +1,14 @@
 package com.example.chat.config;
 
 import com.example.chat.domain.plan.PlanEntity;
+import com.example.chat.domain.user.UserEntity;
+import com.example.chat.domain.user.user_enum.UserRole;
+import com.example.chat.domain.user.user_enum.UserStatus;
 import com.example.chat.repository.PlanRepository; // 본인의 PlanRepository 경로에 맞게 수정해주세요
+import com.example.chat.repository.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -16,6 +21,8 @@ import java.util.List;
 public class DataInitializer implements CommandLineRunner {
 
     private final PlanRepository planRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public void run(String... args) {
@@ -46,5 +53,32 @@ public class DataInitializer implements CommandLineRunner {
 
             planRepository.saveAll(defaultPlans);
         }
+
+        // 2. 테스트용 계정 자동 생성 (이메일 인증 스킵 목적)
+        if (userRepository.findByEmail("test@gmail.com").isEmpty()) {
+            PlanEntity basicPlan = planRepository.findByName("BASIC")
+                    .orElseThrow(() -> new RuntimeException("BASIC 플랜을 찾을 수 없습니다."));
+
+            UserEntity testUser = UserEntity.builder()
+                    .email("test@gmail.com")
+                    // 테스트용 비밀번호 암호화 적용
+                    .password(passwordEncoder.encode("Password123!"))
+                    .username("tester")
+                    .role(UserRole.USER)
+                    .status(UserStatus.ACTIVE)
+                    .plan(basicPlan)
+                    .remainingTokens(5000)
+                    .build();
+
+            userRepository.save(testUser);
+            System.out.println("✅ 테스트용 계정 자동 생성 완료 (ID: test@gmail.com / PW: Password123!)");
+        }
+
+        userRepository.findByEmail("test@gmail.com").ifPresent(user -> {
+            PlanEntity premiumPlan = planRepository.findByName("PREMIUM").orElseThrow();
+            user.upgradePlan(premiumPlan);
+            userRepository.save(user);
+            System.out.println("🚀 테스트 유저(test@gmail.com)가 PREMIUM 플랜으로 강제 업그레이드 되었습니다!");
+        });
     }
 }
