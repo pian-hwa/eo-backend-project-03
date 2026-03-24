@@ -13,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.core.publisher.Flux;
 
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -35,18 +36,21 @@ public class AiClient {
 
     /**
      * [ChatService 연동 핵심 메서드]
-     * ChatService.askAi() 에서 넘겨주는 프롬프트, 모델명, 채팅 타입을 그대로 받아서 처리합니다.
      */
     public AiDto.Response getAiAnswer(String content, String modelName, ChatType chatType) {
         try {
-            // ChatType에 따라 알맞은 외부 API 엔드포인트로 분기합니다.
+            // CHAT(일반 대화)일 경우 파싱 에러를 방지하기 위해 스트리밍 전용 처리 메서드로 바로 반환합니다.
+            if (chatType == ChatType.CHAT) {
+                return askQuestionWithStream(content, modelName);
+            }
+
+            // 요약 기능 등은 기존 방식(단발성) 사용
             String rawResponse = switch (chatType) {
-                case CHAT -> askQuestion(content, modelName);
                 case SUMMARY -> summarizePage(content);
                 case YOUTUBE -> askYoutubeSummary(content);
+                default -> "";
             };
 
-            // 외부 API의 다양한 JSON 응답 규격을 하나로 통일하여 파싱합니다.
             return parseResponse(rawResponse);
 
         } catch (Exception e) {
@@ -56,8 +60,7 @@ public class AiClient {
     }
 
     /**
-     * [ChatService 연동 메서드]
-     * 새로운 세션이 생성될 때 ChatService.prepareChat() 에서 호출하여 이전 문맥을 비웁니다.
+     * 새로운 세션이 생성될 때 호출하여 이전 문맥을 비웁니다.
      */
     public void clearAiHistory() {
         log.info("앨런 AI 상태 초기화 요청 (client_id: {})", clientId);
@@ -74,26 +77,64 @@ public class AiClient {
     }
 
     // =========================================================================
-    // 외부 API(Alan AI 등)와 직접 통신하는 내부 헬퍼 메서드
+    // 외부 API(Alan AI) 통신 헬퍼 메서드
     // =========================================================================
 
     /**
-     * 일반 질문 (GET /api/v1/question)
+     * 일반 질문
      */
-    private String askQuestion(String content, String modelName) {
-        log.info("앨런 일반 질문 요청 (모델: {}): {}", modelName, content);
-        return alanWebClient.get()
+    private AiDto.Response askQuestionWithStream(String content, String modelName) {
+        log.info("앨런 SSE 스트리밍 질문 요청 (모델: {}): {}", modelName, content);
+
+        // WebClient가 한글이나 특수문자, 띄어쓰기를 URL에 맞게 자동으로 인코딩해 줍니다.
+        Flux<String> responseStream = alanWebClient.get()
                 .uri(uriBuilder -> uriBuilder
-                        .path("/question")
-                        .queryParam("client_id", clientId)
-                        .queryParam("content", content)
-                        // 외부 API가 지원한다면 모델명도 추가
-                        .queryParam("model", modelName)
-                        .build())
+                        .path("/question/sse-streaming")
+                        .queryParam("client_id", "{clientId}")
+                        .queryParam("content", "{content}")
+                        .queryParam("model", "{modelName}")
+                        .build(clientId, content, modelName)
+                )
+                .accept(MediaType.TEXT_EVENT_STREAM)
                 .retrieve()
-                .bodyToMono(String.class)
-                .block();
+                .bodyToFlux(String.class)
+                .doOnError(e -> log.error("streamChat 오류 = {}", e.getMessage()));
+
+        List<String> chunks = responseStream.collectList().block();
+
+        if (chunks == null || chunks.isEmpty()) {
+            return new AiDto.Response("AI 응답을 가져오지 못했습니다.", 10);
+        }
+
+        StringBuilder finalAnswer = new StringBuilder();
+        int totalTokens = 10;
+
+        for (String chunk : chunks) {
+            try {
+                if (chunk == null || chunk.trim().isEmpty()) continue;
+
+                JsonNode root = objectMapper.readTree(chunk);
+
+                if (root.has("answer")) {
+                    finalAnswer.append(root.get("answer").asText());
+                } else if (root.has("content")) {
+                    finalAnswer.append(root.get("content").asText());
+                } else {
+                    finalAnswer.append(chunk);
+                }
+
+                if (root.has("used_tokens")) {
+                    totalTokens = root.get("used_tokens").asInt();
+                }
+            } catch (Exception e) {
+                finalAnswer.append(chunk);
+            }
+        }
+
+        return new AiDto.Response(finalAnswer.toString(), totalTokens);
     }
+
+
 
     /**
      * 페이지 요약 (POST /api/v1/chrome/page/summary)
@@ -115,13 +156,9 @@ public class AiClient {
     private String askYoutubeSummary(String videoUrl) {
         log.info("앨런 유튜브 요약 요청 URL: {}", videoUrl);
 
-        // 영상 URL에서 Video ID만 깔끔하게 추출 (정규식 적용됨)
         String videoId = extractVideoId(videoUrl);
-
-        // 자바 서버에서 직접 유튜브 자막 추출
         List<Map<String, Object>> subtitleData = fetchYoutubeSubtitle(videoId);
 
-        // 추출한 자막을 AI 요약 서버로 전송
         return alanWebClient.post()
                 .uri("/summary-youtube")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -131,15 +168,13 @@ public class AiClient {
                 .block();
     }
 
-    // --- JSON 응답 파싱 (안전 장치) ---
+    // --- JSON 응답 파싱 (단발성 응답용 안전 장치) ---
     private AiDto.Response parseResponse(String rawBody) {
         try {
             JsonNode root = objectMapper.readTree(rawBody);
-            // 'answer' 필드가 있으면 쓰고, 없으면 'content' 필드, 둘 다 없으면 통째로 반환
             String answer = root.has("answer") ? root.get("answer").asText() :
                     root.has("content") ? root.get("content").asText() : rawBody;
 
-            // 토큰 정보가 없으면 기본값 10으로 처리
             int tokens = root.has("used_tokens") ? root.get("used_tokens").asInt() : 10;
             return new AiDto.Response(answer, tokens);
         } catch (Exception e) {
@@ -151,13 +186,11 @@ public class AiClient {
     private String extractVideoId(String text) {
         if (text == null) return "";
 
-        //  정규식을 사용하여 프롬프트가 섞여 있어도 v= 뒤의 '정확히 11자리' 영상 ID만 추출
         java.util.regex.Matcher matcher = java.util.regex.Pattern.compile("(?:v=|youtu\\.be\\/)([a-zA-Z0-9_-]{11})").matcher(text);
         if (matcher.find()) {
             return matcher.group(1);
         }
 
-        // 만약 정규식에 안 걸리면 기존 방식대로 자르되, 특수문자(줄바꿈, 따옴표 등)를 제거
         String url = text;
         if (url.contains("v=")) {
             url = url.split("v=")[1].split("&")[0];
@@ -165,22 +198,17 @@ public class AiClient {
             url = url.split("youtu.be/")[1].split("\\?")[0];
         }
 
-        // 영어 대소문자, 숫자, 언더바(_), 하이픈(-) 만 남기고 모두 제거
         return url.replaceAll("[^a-zA-Z0-9_-]", "");
     }
 
     private List<Map<String, Object>> fetchYoutubeSubtitle(String videoId) {
         try {
-
             YoutubeTranscriptApi api = TranscriptApiFactory.createDefault();
-
-            // "ko" (한국어) 우선, 없으면 "en" (영어) 자막 추출
             TranscriptContent content = api.getTranscript(videoId, "ko", "en");
 
             List<Map<String, String>> textList = content.getContent().stream()
                     .map(f -> {
                         Map<String, String> item = new HashMap<>();
-                        // 시작 시간을 HH:mm:ss 포맷으로 변환
                         item.put("timestamp", LocalTime.ofSecondOfDay((long) f.getStart() % 86400).format(DateTimeFormatter.ofPattern("HH:mm:ss")));
                         item.put("content", f.getText().replace("\n", " "));
                         return item;
@@ -193,7 +221,6 @@ public class AiClient {
             ));
         } catch (Exception e) {
             log.error("유튜브 자막 추출 실패 (videoId: {}): {}", videoId, e.getMessage());
-            // 자막 추출 실패 시 빈 리스트를 반환하여 AI가 에러를 내지 않도록 처리
             return Collections.emptyList();
         }
     }

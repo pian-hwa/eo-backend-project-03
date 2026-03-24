@@ -11,14 +11,50 @@ Content-Type: application/json
     client.global.set("auth_token", response.body.data.accessToken);
 %}
 
-### 2. 대망의 AI 채팅 테스트! (자동 저장된 토큰 사용)
+### 2. 첫 번째 질문 (새 방 개설 & 기억 리셋)
 POST http://localhost:8080/api/chat/ask
-Content-Type: application/json
 Authorization: Bearer {{auth_token}}
+Content-Type: application/json
 
 {
-  "content": "안녕 오늘 기분어때",
-  "modelName": "gpt-4"
+  "content": "중식 메뉴 추천해줘",
+  "modelName": "gpt-4o-mini"
+}
+> {%
+    // 여기서 생성된 방 번호를 session_id 변수에 저장
+    client.global.set("session_id", response.body.data.sessionId);
+%}
+
+### 2-1. 두 번째 질문 (같은 방에서 이어서 대화)
+# 🚨 주소에 ?sessionId={{session_id}} 가 있으므로 이전 대화를 기억함!
+POST http://localhost:8080/api/chat/ask?sessionId={{session_id}}
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "content": "그 중에서 첫번째 음식이 뭐더라?",
+  "modelName": "gpt-4o-mini"
+}
+
+### 2-2. 세 번째 질문 (계속 같은 방에서 이어가기)
+# 🚨 똑같이 ?sessionId={{session_id}} 를 유지해야 합니다!
+POST http://localhost:8080/api/chat/ask?sessionId={{session_id}}
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "content": "그거 만드는데 시간은 얼마나 걸려?",
+  "modelName": "gpt-4o-mini"
+}
+
+### 2-3. 네 번째 질문 (계속 같은 방에서 이어가기)
+POST http://localhost:8080/api/chat/ask?sessionId={{session_id}}
+Authorization: Bearer {{auth_token}}
+Content-Type: application/json
+
+{
+  "content": "필요한 재료도 정리해줘",
+  "modelName": "gpt-4o-mini"
 }
 
 ### 3. 내 남은 토큰 깎였는지 확인
