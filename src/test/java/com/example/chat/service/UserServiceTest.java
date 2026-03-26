@@ -66,7 +66,7 @@ class UserServiceTest {
     @DisplayName("회원가입 성공 - 첫 가입자는 ADMIN 권한을 받는다")
     void signup_success_firstUserIsAdmin() {
         // given
-        UserDto.SignUpRequest request = new UserDto.SignUpRequest("test@test.com", "Password123!", "tester", "홍길동");
+        UserDto.SignUpRequest request = new UserDto.SignUpRequest("test@test.com", "Password123!", "tester");
         EmailVerificationEntity verifiedEmail = EmailVerificationEntity
                         .builder()
                         .email("test@test.com")
@@ -110,7 +110,7 @@ class UserServiceTest {
     @DisplayName("회원가입 성공 - 두 번째 가입자부터는 USER 권한을 받는다")
     void signup_success_secondUserIsUser() {
         // given
-        UserDto.SignUpRequest request = new UserDto.SignUpRequest("user2@test.com", "Password123!", "tester2", "이몽룡");
+        UserDto.SignUpRequest request = new UserDto.SignUpRequest("user2@test.com", "Password123!", "tester2");
         EmailVerificationEntity verifiedEmail = EmailVerificationEntity.builder().email("user2@test.com").isVerified(true).build();
         PlanEntity basicPlan = PlanEntity.builder().id("plan-1").name("BASIC").limitTokens(100).build();
 
@@ -147,7 +147,7 @@ class UserServiceTest {
     @DisplayName("회원가입 실패 - 이메일 인증을 진행하지 않은 경우")
     void signup_fail_notVerified() {
         // given
-        UserDto.SignUpRequest request = new UserDto.SignUpRequest("test@test.com", "Password123!", "tester", "홍길동");
+        UserDto.SignUpRequest request = new UserDto.SignUpRequest("test@test.com", "Password123!", "tester");
         // 인증 데이터 없음
         when(verificationRepository.findById(request.email())).thenReturn(Optional.empty());
 
@@ -162,7 +162,7 @@ class UserServiceTest {
     @DisplayName("회원가입 실패 - 이미 가입된 이메일인 경우")
     void signup_fail_duplicateEmail() {
         // given
-        UserDto.SignUpRequest request = new UserDto.SignUpRequest("test@test.com", "Password123!", "tester", "홍길동");
+        UserDto.SignUpRequest request = new UserDto.SignUpRequest("test@test.com", "Password123!", "tester");
         EmailVerificationEntity verifiedEmail = EmailVerificationEntity.builder().email("test@test.com").isVerified(true).build();
 
         when(verificationRepository.findById(request.email())).thenReturn(Optional.of(verifiedEmail));

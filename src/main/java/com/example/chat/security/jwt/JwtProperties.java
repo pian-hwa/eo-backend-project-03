@@ -10,5 +10,3 @@ public record JwtProperties(
         Duration accessTokenExpiration,
         Duration refreshTokenExpiration
 ) {}
-
-// 설명용 내용작성

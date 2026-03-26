@@ -6,6 +6,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import lombok.Builder;
 
+import java.time.LocalDateTime;
+
 public class UserDto {
 
 
@@ -20,10 +22,7 @@ public class UserDto {
             String password,
 
             @NotBlank(message = "유저네임(아이디)은 필수 입력값입니다.")
-            String username,
-
-            @NotBlank(message = "이름은 필수 입력값입니다.")
-            String name
+            String username
     ) {}
 
 
@@ -81,7 +80,9 @@ public class UserDto {
             String planName,
             String availableModels,
             // 잔여 토큰
-            int remainingTokens
+            int remainingTokens,
+            // 만료 기간
+            LocalDateTime planEndDate
     ) {
         // Entity -> Dto
         public static Response fromEntity(UserEntity user) {
@@ -89,13 +90,12 @@ public class UserDto {
                     .id(user.getId())
                     .email(user.getEmail())
                     .username(user.getUsername())
-                    .role(user.getRole() != null ? user.getRole().name() : "USER")
-                    .status(user.getStatus() != null ? user.getStatus().name() : "ACTIVE")
-                    // 플랜이 연결되어 있다면 플랜 정보 추출
+                    .role(user.getRole().name())
+                    .status(user.getStatus().name())
                     .planName(user.getPlan() != null ? user.getPlan().getName() : "NONE")
                     .remainingTokens(user.getRemainingTokens())
-                    // PlanEntity에 정의된 availableModels를 넘겨줍니다.
                     .availableModels(user.getPlan() != null ? user.getPlan().getAvailableModels() : "gpt-3.5-turbo")
+                    .planEndDate(user.getPlanEndDate())
                     .build();
         }
     }
