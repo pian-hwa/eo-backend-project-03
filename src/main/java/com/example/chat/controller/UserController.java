@@ -174,8 +174,29 @@ public class UserController {
      * POST /api/users/password/reset
      */
     @PostMapping("/password/reset")
-    public ResponseEntity<ApiResponseDto<Void>> resetPassword(@Valid @RequestBody UserDto.PasswordResetRequest request) {
+    public ResponseEntity<ApiResponseDto<Void>> resetPassword(
+            @Valid @RequestBody UserDto.PasswordResetRequest request, HttpServletResponse response) {
+
+        // 서비스 단에서 비밀번호 변경 로직 수행
         userService.resetPassword(request);
-        return ResponseEntity.ok(ApiResponseDto.success("비밀번호가 성공적으로 변경되었습니다. 새로운 비밀번호로 로그인해주세요."));
+
+        // 브라우저에 저장된 기존 JWT 쿠키(출입증)의 수명을 0으로 만들어 강제 폐기 (로그아웃 처리)
+        ResponseCookie deleteAccessToken = ResponseCookie.from("accessToken", "")
+                .maxAge(0)
+                .path("/")
+                .httpOnly(true)
+                .build();
+
+        ResponseCookie deleteRefreshToken = ResponseCookie.from("refreshToken", "")
+                .maxAge(0)
+                .path("/")
+                .httpOnly(true)
+                .build();
+
+        // 응답 헤더에 빈 쿠키를 덮어씌워 브라우저에 전달
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteAccessToken.toString());
+        response.addHeader(HttpHeaders.SET_COOKIE, deleteRefreshToken.toString());
+
+        return ResponseEntity.ok(ApiResponseDto.success("비밀번호가 성공적으로 변경되었습니다. 안전을 위해 로그아웃되었습니다. 새로운 비밀번호로 로그인해주세요."));
     }
 }

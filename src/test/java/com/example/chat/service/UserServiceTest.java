@@ -50,6 +50,7 @@ class UserServiceTest {
      * 로그인 실패 (비밀번호가 안 맞는경우
      * 내정보 불러오기 api
      * 내정보 수정 api
+     * 비밀번호 재설정
      */
 
 
@@ -402,5 +403,32 @@ class UserServiceTest {
 
         // then
         assertThat(user.getStatus()).isEqualTo(UserStatus.WITHDRAWN);
+    }
+
+    @Test
+    @DisplayName("비밀번호 재설정 성공 - 유효한 토큰으로 새로운 비밀번호가 정상적으로 저장된다")
+    void resetPassword_success() {
+        // given
+        UserDto.PasswordResetRequest request = new UserDto.PasswordResetRequest("valid-token-1234", "newPassword123!");
+
+        UserEntity user = UserEntity.builder()
+                .id("user-1")
+                .password("oldEncodedPassword")
+                .status(UserStatus.ACTIVE)
+                .build();
+
+        // UserRepository에서도 findByResetToken을 호출하도록 가짜(Mock) 응답을 세팅합니다.
+        when(userRepository.findByResetToken(request.resetToken())).thenReturn(Optional.of(user));
+
+        // 새 비밀번호가 암호화되는 과정 세팅
+        when(passwordEncoder.encode(request.newPassword())).thenReturn("newEncodedPassword");
+
+        // when
+        userService.resetPassword(request);
+
+        // then
+        // 유저의 비밀번호가 새롭게 암호화된 비밀번호로 정확히 변경되었는지 검증합니다.
+        assertThat(user.getPassword()).isEqualTo("newEncodedPassword");
+        verify(passwordEncoder, times(1)).encode(request.newPassword());
     }
 }
