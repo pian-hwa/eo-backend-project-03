@@ -70,7 +70,10 @@
 1. 프로젝트 클론
 ```bash
 git clone [프로젝트 레포지토리 주소]
+```
+
 2.application-secret.yml 파일 설정
+```bash
 src/main/resources/ 경로에 아래 형식의 파일을 생성하고 본인의 API 키를 입력하세요.
 
 mail:
@@ -89,7 +92,10 @@ portone:
 alan:
   api:
     key: "발급받은_Alan_API_키"
+```
 
 3.IntelliJ IDEA 실행 및 빌드
+```bash
 IntelliJ IDEA에서 프로젝트를 열고 Gradle을 동기화(Sync) 합니다.
 ChatApplication.java의 Main 메서드를 실행합니다. (bootRun)
+```
