@@ -22,15 +22,14 @@
 
 ### Backend
 * **Language:** Java
-* **Framework:** Spring Boot 3.x
+* **Framework:** Spring Boot
 * **Security:** Spring Security, JWT (JSON Web Token), OAuth2
 * **Database:** JPA (Hibernate), H2 Database (개발용)
 
 ### APIs & External Services
 * **AI Service:** Alan AI API (KDT API - Azure Functions 연동)
-* **Payment:** PortOne V2 API (카카오페이 등 간편결제 연동)
+* **Payment:** PortOne V2 API (카카오페이 간편결제 연동)
 * **Email:** Spring Boot Starter Mail (SMTP)
-* **API Docs:** Swagger (Springdoc OpenAPI)
 
 ### Tool
 * **IDE:** IntelliJ IDEA
