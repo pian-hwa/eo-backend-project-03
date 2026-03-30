@@ -21,16 +21,31 @@ public class MailService {
     // 인증 번호 6자리 생성 및 메일 발송
     @Transactional
     public void sendVerificationEmail(String email) {
+
+        // 기존 인증 내역 조회
+        EmailVerificationEntity verification = verificationRepository.findById(email).orElse(null);
+
+        // 1분 쿨타임 체크 로직
+        if (verification != null && verification.getLastSentAt() != null) {
+            LocalDateTime oneMinuteAfterLastSent = verification.getLastSentAt().plusMinutes(1);
+            if (LocalDateTime.now().isBefore(oneMinuteAfterLastSent)) {
+                // 아직 1분이 지나지 않았다면 예외 발생시켜 발송 차단
+                throw new IllegalArgumentException("메일 발송은 1분에 한 번만 가능합니다. 잠시 후 다시 시도해주세요.");
+            }
+        }
+
+        // 기존 내역이 없다면 새로 생성 준비
+        if (verification == null) {
+            verification = EmailVerificationEntity.builder()
+                    .email(email)
+                    .isVerified(false)
+                    .build();
+        }
+
         String code = String.format("%06d", new Random().nextInt(1000000));
+
         // 5분 제한
         LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(5);
-
-        // 이미 요청한 적 있는 이메일이면 덮어쓰기, 아니면 새로 생성
-        EmailVerificationEntity verification = verificationRepository.findById(email)
-                .orElse(EmailVerificationEntity.builder()
-                        .email(email)
-                        .isVerified(false)
-                        .build());
 
         verification.updateCode(code, expiryDate);
         verificationRepository.save(verification);
