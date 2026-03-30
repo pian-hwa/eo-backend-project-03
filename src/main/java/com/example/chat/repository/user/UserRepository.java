@@ -18,8 +18,8 @@ public interface UserRepository extends JpaRepository<UserEntity, String> {
     // 닉네임 중복확인
     boolean existsByUsername(String username);
 
-    // 비밀번호 재설정 토큰으로 유저 찾기
-    Optional<UserEntity> findByResetToken(String resetToken);
+    // 비밀번호 재설정 코드으로 유저 찾기
+    Optional<UserEntity> findByResetCode(String resetCode);
 
     @Query("SELECT p.name AS planName, COUNT(u) AS userCount " +
         "FROM UserEntity u JOIN u.plan p " +

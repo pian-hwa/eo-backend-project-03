@@ -37,7 +37,6 @@ public class UserEntity extends BaseTimeEntity {
     @Column(name = "role", nullable = false)
     private UserRole role;
 
-    // boolean 자료형으로 비교만 하도록 수정
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
     private UserStatus status;
@@ -60,9 +59,9 @@ public class UserEntity extends BaseTimeEntity {
     // 플랜 만료일
     private LocalDateTime planEndDate;
 
-    // 비밀번호 재설정 토큰 로직
-    private String resetToken;
-    private LocalDateTime tokenExpiry;
+    // 비밀번호 재설정용 6자리 번호와 만료 시간 로직
+    private String resetCode;
+    private LocalDateTime resetCodeExpiry;
 
 
     // ==========================================
@@ -74,14 +73,21 @@ public class UserEntity extends BaseTimeEntity {
         this.password = newPassword;
     }
 
-    // 비밀번호 재설정 토큰 발급
-    public void generateResetToken(String token) {
-        this.resetToken = token;
+    // 비밀번호 재설정용 6자리 인증번호 발급 및 5분 만료 세팅
+    public void generateResetCode(String code) {
+        this.resetCode = code;
+        this.resetCodeExpiry = LocalDateTime.now().plusMinutes(5);
     }
 
-    // 비밀번호 변경 완료 후 토큰 폐기
-    public void clearResetToken() {
-        this.resetToken = null;
+    // 비밀번호 변경 완료 후 인증번호 및 만료 시간 폐기
+    public void clearResetCode() {
+        this.resetCode = null;
+        this.resetCodeExpiry = null;
+    }
+
+    // 인증번호가 만료되었는지 확인하는 메서드
+    public boolean isResetCodeExpired() {
+        return this.resetCodeExpiry == null || LocalDateTime.now().isAfter(this.resetCodeExpiry);
     }
 
     // 토큰 차감 메서드
@@ -121,10 +127,8 @@ public class UserEntity extends BaseTimeEntity {
     // 시간에 맞춰 초기화되는 토큰량
     public void resetTokens() {
         if (this.plan != null) {
-            // PlanEntity의 limitTokens 값을 가져와 remainingTokens에 할당
             this.remainingTokens = this.plan.getLimitTokens();
         } else {
-            // 플랜이 없는 경우(기본값)를 대비한 로직
             this.remainingTokens = 5000;
         }
     }
@@ -134,7 +138,6 @@ public class UserEntity extends BaseTimeEntity {
         this.plan = newPlan;
         this.remainingTokens = newPlan.getLimitTokens();
 
-        // BASIC 플랜은 무제한이므로 만료일이 없고, 유료 플랜만 30일 기간 설정
         if ("BASIC".equals(newPlan.getName())) {
             this.planEndDate = null;
         } else {
@@ -144,7 +147,6 @@ public class UserEntity extends BaseTimeEntity {
 
     // 현재 유저의 유료 플랜이 만료되었는지 확인
     public boolean isPlanExpired() {
-        // 만료일 데이터가 존재하고, 현재 시간이 그 만료일을 지났다면 true 반환
         return this.planEndDate != null && LocalDateTime.now().isAfter(this.planEndDate);
     }
 
@@ -154,7 +156,6 @@ public class UserEntity extends BaseTimeEntity {
             throw new IllegalArgumentException("유효하지 않은 기본(BASIC) 플랜 정보입니다.");
         }
         this.plan = basicPlan;
-        // BASIC 플랜은 만료일이 없으므로 null로 초기화
         this.planEndDate = null;
     }
 }

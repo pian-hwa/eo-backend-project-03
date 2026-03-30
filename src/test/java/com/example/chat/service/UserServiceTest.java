@@ -417,8 +417,8 @@ class UserServiceTest {
                 .status(UserStatus.ACTIVE)
                 .build();
 
-        // UserRepository에서도 findByResetToken을 호출하도록 가짜(Mock) 응답을 세팅합니다.
-        when(userRepository.findByResetToken(request.resetToken())).thenReturn(Optional.of(user));
+        // UserRepository에서도 findByResetCode 호출하도록 가짜(Mock) 응답을 세팅합니다.
+        when(userRepository.findByResetCode(request.resetCode())).thenReturn(Optional.of(user));
 
         // 새 비밀번호가 암호화되는 과정 세팅
         when(passwordEncoder.encode(request.newPassword())).thenReturn("newEncodedPassword");
