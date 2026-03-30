@@ -32,6 +32,10 @@ public class EmailVerificationEntity {
     @Column(name = "expiryDate", nullable = false)
     private LocalDateTime expiryDate;
 
+    // 1분 쿨타임를 위한 마지막 발송 시간 기록
+    @Column(name = "lastSentAt")
+    private LocalDateTime lastSentAt;
+
     // 인증 성공 처리 메서드
     public void verifySuccess() {
         this.isVerified = true;
@@ -42,5 +46,6 @@ public class EmailVerificationEntity {
         this.verificationCode = newCode;
         this.expiryDate = newExpiryDate;
         this.isVerified = false;
+        this.lastSentAt = LocalDateTime.now();
     }
 }
