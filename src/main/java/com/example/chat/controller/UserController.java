@@ -150,12 +150,29 @@ public class UserController {
      */
     @DeleteMapping("/withdraw")
     public ResponseEntity<ApiResponseDto<Void>> withdraw(
-            // JWT 토큰에서 현재 로그인한 유저 정보를 추출
             @AuthenticationPrincipal CustomUserDetails userDetails
     ) {
-        // 토큰에 들어있던 정보를 서비스로 넘겨서 탈퇴 처리
+        // 서비스에서 DB 상태 변경 (탈퇴 처리)
         userService.withdrawUser(userDetails.getId());
-        return ResponseEntity.ok(ApiResponseDto.success("회원 탈퇴가 완료되었습니다."));
+
+        // 브라우저에 저장된 기존 JWT 쿠키를 강제 폐기 (로그아웃 처리)
+        ResponseCookie deleteAccessToken = ResponseCookie.from("accessToken", "")
+                .maxAge(0)
+                .path("/")
+                .httpOnly(true)
+                .build();
+
+        ResponseCookie deleteRefreshToken = ResponseCookie.from("refreshToken", "")
+                .maxAge(0)
+                .path("/")
+                .httpOnly(true)
+                .build();
+
+        // 응답 헤더에 만료된 쿠키를 담아서 반환
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteAccessToken.toString())
+                .header(HttpHeaders.SET_COOKIE, deleteRefreshToken.toString())
+                .body(ApiResponseDto.success("회원 탈퇴가 완료되었습니다. 이용해주셔서 감사합니다."));
     }
 
 
