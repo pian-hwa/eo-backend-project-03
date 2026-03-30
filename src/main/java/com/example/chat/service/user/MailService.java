@@ -18,7 +18,7 @@ public class MailService {
     private final JavaMailSender mailSender;
     private final EmailRepository verificationRepository;
 
-    // 인증 번호 6자리 생성 및 메일 발송
+    // 인증 번호 6자리 생성 및 메일 발송 (회원가입용)
     @Transactional
     public void sendVerificationEmail(String email) {
 
@@ -42,7 +42,7 @@ public class MailService {
                     .build();
         }
 
-        String code = String.format("%06d", new Random().nextInt(1000000));
+        String code = generate6DigitCode(); // 공통 메서드 사용
 
         // 5분 제한
         LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(5);
@@ -57,17 +57,17 @@ public class MailService {
     }
 
     // 비밀번호 재설정 메일 발송
-    public void sendPasswordResetMail(String toEmail, String resetToken) {
+    public void sendPasswordResetMail(String toEmail, String resetCode) {
 
         String subject = "[AI Chat] 비밀번호 재설정 안내";
-        String text = "비밀번호를 재설정하려면 다음 토큰을 사용해주세요.\n\n"
-                + "재설정 토큰: " + resetToken + "\n\n"
-                + "본인이 요청하지 않았다면 이 메일을 무시해주세요.";
+        String text = "비밀번호를 재설정하려면 다음 인증 번호를 사용해주세요.\n\n"
+                + "재설정 인증 번호: [" + resetCode + "]\n\n"
+                + "5분 안에 입력해 주세요. 본인이 요청하지 않았다면 이 메일을 무시해주세요.";
 
         sendMail(toEmail, subject, text);
     }
 
-    // 사용자가 입력한 번호 검증
+    // 사용자가 입력한 번호 검증 (회원가입 시 사용)
     @Transactional
     public boolean verifyCode(String email, String inputCode) {
         EmailVerificationEntity verification = verificationRepository.findById(email)
@@ -86,7 +86,12 @@ public class MailService {
         return true;
     }
 
-    // 인증 번호 및 재설정 토큰 발송
+    // 6자리 난수 생성 공통 메서드
+    public String generate6DigitCode() {
+        return String.format("%06d", new Random().nextInt(1000000));
+    }
+
+    // 인증 번호 및 재설정 토큰 발송 공통 로직
     private void sendMail(String toEmail, String subject, String text) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);

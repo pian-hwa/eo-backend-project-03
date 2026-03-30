@@ -117,12 +117,13 @@ class UserControllerTest {
     @Test
     @DisplayName("비밀번호 재설정 성공 - 응답 쿠키의 Max-Age가 0이 되어 강제 로그아웃 처리된다")
     void resetPassword_success_cookieDeleted() throws Exception {
-        // given: 실제 DB의 테스트 유저에게 재설정 토큰을 세팅
-        String validToken = "valid-token-1234";
-        testUser.generateResetToken(validToken);
-        userRepository.saveAndFlush(testUser); // 변경사항 DB 즉시 반영
+        // given: 실제 DB의 테스트 유저에게 재설정 인증번호를 세팅 (6자리 숫자로 변경)
+        String validCode = "123456";
+        testUser.generateResetCode(validCode);
+        userRepository.saveAndFlush(testUser);
 
-        UserDto.PasswordResetRequest request = new UserDto.PasswordResetRequest(validToken, "newPassword123!");
+        // PasswordResetRequest DTO의 필드명도 resetCode로 일치시킴
+        UserDto.PasswordResetRequest request = new UserDto.PasswordResetRequest(validCode, "newPassword123!");
 
         // when & then
         mockMvc.perform(post("/api/users/password/reset")

@@ -102,24 +102,33 @@ public class UserService {
         UserEntity user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new IllegalArgumentException("가입되지 않은 이메일입니다."));
 
-        // 소셜 연동 계정은 자체 비밀번호가 없으므로 찾기 불가
         if (user.getProvider() != UserProvider.LOCAL) {
-            throw new IllegalArgumentException("소셜 로그인 연동 계정은 이 기능을 사용할 수 없습니다.");
+            throw new IllegalArgumentException("소셜 계정은 해당 기능을 사용할 수 없습니다.");
         }
 
-        String resetToken = UUID.randomUUID().toString();
-        user.generateResetToken(resetToken);
-        mailService.sendPasswordResetMail(user.getEmail(), resetToken);
+        // 🚨 6자리 번호 생성 및 저장
+        String resetCode = mailService.generate6DigitCode();
+        user.generateResetCode(resetCode);
+
+        // 메일 발송
+        mailService.sendPasswordResetMail(user.getEmail(), resetCode);
     }
 
     @Transactional
     public void resetPassword(UserDto.PasswordResetRequest request) {
-        UserEntity user = userRepository.findByResetToken(request.resetToken())
-                .orElseThrow(() -> new IllegalArgumentException("유효하지 않거나 만료된 재설정 토큰입니다."));
+        // 번호와 이메일로 유저를 찾는 방식이 더 안전합니다 (또는 번호로만 조회)
+        UserEntity user = userRepository.findByResetCode(request.resetCode())
+                .orElseThrow(() -> new IllegalArgumentException("인증 번호가 잘못되었거나 만료되었습니다."));
 
-        String encodedPassword = passwordEncoder.encode(request.newPassword());
-        user.updatePassword(encodedPassword);
-        user.clearResetToken();
+        // 만료 시간 체크
+        if (user.isResetCodeExpired()) {
+            user.clearResetCode();
+            throw new IllegalArgumentException("인증 시간이 만료되었습니다. 다시 요청해 주세요.");
+        }
+
+        // 비밀번호 변경 및 번호 초기화
+        user.updatePassword(passwordEncoder.encode(request.newPassword()));
+        user.clearResetCode();
     }
 
     @Transactional(readOnly = true)

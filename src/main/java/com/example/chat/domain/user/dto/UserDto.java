@@ -44,11 +44,13 @@ public class UserDto {
 
     // 비밀번호 재설정 요청 (메일로 받은 토큰 + 새 비밀번호)
     public record PasswordResetRequest(
-            @NotBlank(message = "잘못된 접근입니다. (토큰 누락)")
-            String resetToken,
+            @NotBlank(message = "인증 번호를 입력해주세요.")
+            @Pattern(regexp = "\\d{6}", message = "인증 번호는 숫자 6자리입니다.")
+            String resetCode,
 
             @NotBlank(message = "새로운 비밀번호를 입력해주세요.")
-            @Pattern(regexp = "(?=.*[0-9])(?=.*[a-zA-Z])(?=.*\\W)(?=\\S+$).{8,16}", message = "비밀번호는 8~16자 영문 대 소문자, 숫자, 특수문자를 사용하세요.")
+            @Pattern(regexp = "(?=.*[0-9])(?=.*[a-zA-Z])(?=.*\\W)(?=\\S+$).{8,16}",
+                    message = "비밀번호는 8~16자 영문 대 소문자, 숫자, 특수문자를 사용하세요.")
             String newPassword
     ) {}
 
